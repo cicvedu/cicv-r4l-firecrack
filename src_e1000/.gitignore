@@ -1,0 +1,10 @@
+*.cmd
+Module.symvers
+modules.order
+r4l_e1000_demo.ko
+r4l_e1000_demo.mod
+r4l_e1000_demo.mod.c
+r4l_e1000_demo.mod.o
+r4l_e1000_demo.o
+rootfs_img
+/rootfs/
