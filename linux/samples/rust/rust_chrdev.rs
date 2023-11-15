@@ -40,11 +40,33 @@ impl file::Operations for RustFile {
     }
 
     fn write(_this: &Self,_file: &file::File,_reader: &mut impl kernel::io_buffer::IoBufferReader,_offset:u64,) -> Result<usize> {
-        Err(EPERM)
+        if _reader.is_empty() {
+            return Ok(0);
+        }
+
+        let mut data_buf = _this.inner.lock();
+
+        let read_len = if _reader.len() > GLOBALMEM_SIZE {
+            GLOBALMEM_SIZE
+        } else {
+            _reader.len()
+        };
+
+        _reader.read_slice(&mut data_buf[..read_len])?;
+        Ok(read_len)
     }
 
     fn read(_this: &Self,_file: &file::File,_writer: &mut impl kernel::io_buffer::IoBufferWriter,_offset:u64,) -> Result<usize> {
-        Err(EPERM)
+        // 加锁
+        let data = _this.inner.lock();
+
+        // 计算写入长度
+        let len = core::cmp::min(_writer.len(), data.len().saturating_sub(_offset as usize));
+
+        _writer.write_slice(&data[_offset as usize..][..len])?;
+
+        Ok(len)
+
     }
 }
 
@@ -54,7 +76,7 @@ struct RustChrdev {
 
 impl kernel::Module for RustChrdev {
     fn init(name: &'static CStr, module: &'static ThisModule) -> Result<Self> {
-        pr_info!("Rust character device sample (init)\n");
+        pr_info!("Rust character device {name} (init)\n");
 
         let mut chrdev_reg = chrdev::Registration::new_pinned(name, 0, module)?;
 
